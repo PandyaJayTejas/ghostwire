@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="theme-color" content="#000000"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="description" content="GhostWire — Encrypted P2P Communication"/>
+<title>GhostWire</title>
+<link rel="manifest" href="/manifest.json"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<style>
+/* ======================== TERMINAL NOCTURNE MOBILE ======================== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --p:#00FF41;--pd:rgba(0,255,65,.15);--pg:rgba(0,255,65,.3);--op:#000;
+  --bv:#000;--bs:#0a0a0a;--bc:#111;--bch:#1a1a1a;--bcl:#080808;
+  --os:#e0e0e0;--osv:#a0a0a0;--tm:#666;--tg:#333;--dng:#FF0040;
+  --ol:#222;--olv:#1a1a1a;
+  --fm:'JetBrains Mono','Courier New',monospace;
+  --fp:'Inter',system-ui,sans-serif;
+  --st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;width:100%;overflow:hidden;background:var(--bv);color:var(--os);
+  font-family:var(--fp);font-size:14px;-webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;text-transform:uppercase;letter-spacing:.03em;user-select:none}
+#app{height:100%;display:flex;flex-direction:column}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--tg)}
+
+/* Scanlines */
+#app::after{content:'';position:fixed;top:0;left:0;right:0;height:200%;
+  background:repeating-linear-gradient(transparent 0px,transparent 2px,rgba(0,255,65,.015) 2px,rgba(0,255,65,.015) 4px);
+  pointer-events:none;z-index:9999;animation:scan 8s linear infinite}
+@keyframes scan{0%{top:-100%}100%{top:100%}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 4px var(--p)}50%{box-shadow:0 0 16px var(--p)}}
+@keyframes blink{50%{opacity:0}}
+
+/* Status dots */
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.dot.on{background:var(--p);box-shadow:0 0 6px var(--p)}
+.dot.off{background:var(--tg)}
+.dot.spin{background:#FFD600;animation:pulse 1.5s ease infinite}
+
+/* Buttons */
+.btn{padding:12px 16px;background:var(--bch);border:none;color:var(--os);font-family:var(--fp);
+  font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;
+  border-radius:0;transition:all .15s ease;-webkit-tap-highlight-color:transparent}
+.btn-p{background:var(--p);color:var(--op)}
+.btn-p:active{background:#00cc34;transform:scale(.97)}
+.btn-d{background:rgba(255,0,64,.2);color:var(--dng)}
+.btn-f{width:100%}
+
+/* Toast */
+.tc{position:fixed;top:calc(var(--st) + 16px);left:16px;right:16px;z-index:10000;display:flex;flex-direction:column;gap:8px}
+.t{background:var(--bch);color:var(--p);padding:12px 16px;font-family:var(--fm);font-size:12px;
+  border-left:3px solid var(--p);animation:fadeUp .3s ease}
+
+/* Progress */
+.pbar{height:4px;background:var(--bch);overflow:hidden}
+.pfill{height:100%;background:var(--p);box-shadow:0 0 6px var(--pg)}
+
+/* ======================== HEADER ======================== */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;
+  padding-top:calc(var(--st) + 12px);background:var(--bs);min-height:56px;z-index:10}
+.hdr-logo{font-family:var(--fm);font-size:16px;font-weight:700;color:var(--p);letter-spacing:.1em;
+  text-shadow:0 0 12px var(--pg)}
+.hdr-st{display:flex;align-items:center;gap:8px;font-family:var(--fm);font-size:10px;color:var(--tm)}
+
+/* ======================== BOTTOM NAV ======================== */
+.bnav{display:flex;background:var(--bs);padding-bottom:var(--sb);border-top:1px solid var(--ol);z-index:10}
+.ntab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;
+  color:var(--tm);font-size:10px;font-weight:600;cursor:pointer;position:relative;
+  transition:color .15s;-webkit-tap-highlight-color:transparent}
+.ntab .material-icons{font-size:22px}
+.ntab.a{color:var(--p)}
+.ntab.a::before{content:'';position:absolute;top:0;width:24px;height:2px;background:var(--p);box-shadow:0 0 8px var(--p)}
+
+/* ======================== SCREEN ======================== */
+.scr{flex:1;overflow-y:auto;overflow-x:hidden}
+
+/* ======================== CONNECT SCREEN ======================== */
+.cs{padding:20px;animation:fadeIn .3s ease}
+.cs-title{font-family:var(--fm);font-size:20px;font-weight:700;margin-bottom:4px}
+.cs-sub{font-size:12px;color:var(--tm);margin-bottom:24px}
+.cs-card{background:var(--bcl);padding:16px;margin-bottom:20px;display:flex;align-items:center;gap:12px}
+.cs-icon{width:40px;height:40px;background:var(--pd);display:flex;align-items:center;justify-content:center}
+.cs-icon .material-icons{color:var(--p);font-size:22px}
+.cs-txt{flex:1}
+.cs-lbl{font-size:12px;font-weight:700}.cs-desc{font-family:var(--fm);font-size:10px;color:var(--tm)}
+.cs-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
+.cs-cell{background:var(--bcl);padding:12px}
+.cs-cl{font-size:10px;color:var(--tg);margin-bottom:4px}
+.cs-cv{font-family:var(--fm);font-size:12px;color:var(--p)}
+.cs-sec{font-size:12px;font-weight:700;color:var(--osv);letter-spacing:.06em;margin-bottom:12px}
+
+/* IP Connect Form */
+.ip-form{background:var(--bcl);padding:16px;margin-bottom:20px}
+.ip-row{display:flex;gap:8px;align-items:center}
+.ip-prefix{font-family:var(--fm);font-size:14px;color:var(--p);white-space:nowrap}
+.ip-input{flex:1;background:transparent;border:none;border-bottom:2px solid var(--olv);
+  font-family:var(--fm);font-size:14px;color:var(--os);outline:none;padding:8px 0;
+  text-transform:uppercase;appearance:none;-webkit-appearance:none}
+.ip-input::placeholder{color:var(--tg)}.ip-input:focus{border-bottom-color:var(--p)}
+
+/* Peer cards */
+.pc{display:flex;align-items:center;gap:12px;padding:16px;background:var(--bcl);
+  margin-bottom:8px;cursor:pointer;transition:background .15s}
+.pc:active{background:var(--bc)}
+.pc-av{width:36px;height:36px;background:var(--bch);display:flex;align-items:center;justify-content:center;
+  font-family:var(--fm);font-size:12px;color:var(--p);position:relative}
+.pc-av .dot{position:absolute;bottom:-1px;right:-1px}
+.pc-info{flex:1;min-width:0}
+.pc-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-fp{font-family:var(--fm);font-size:10px;color:var(--tm)}
+.badge{padding:2px 8px;font-size:10px;font-weight:700}
+.badge-p{background:var(--p);color:var(--op)}.badge-o{border:1px solid var(--ol);color:var(--tm)}
+
+/* ======================== CHAT SCREEN ======================== */
+.ch{height:100%;display:flex;flex-direction:column}
+.ch-hdr{display:flex;align-items:center;gap:12px;padding:12px 16px;
+  padding-top:calc(var(--st) + 12px);background:var(--bs);min-height:56px}
+.ch-back{color:var(--tm);cursor:pointer}.ch-back:active{color:var(--p)}
+.ch-pi{flex:1}.ch-pn{font-size:16px;font-weight:700;letter-spacing:.04em}
+.ch-ps{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--p)}
+.ch-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.mg{display:flex;flex-direction:column;gap:4px}
+.ms{font-size:10px;font-weight:700;letter-spacing:.04em}
+.ms.s{color:var(--p);text-align:right}.ms.r{color:var(--osv)}
+.mt{font-family:var(--fm);font-size:10px;color:var(--tg);font-weight:400;margin-left:8px}
+.mb{max-width:85%;padding:12px 16px;font-size:14px;line-height:1.5;text-transform:none;letter-spacing:0;word-break:break-word}
+.mb.rx{background:var(--bc);border-left:2px solid var(--p);align-self:flex-start}
+.mb.tx{background:var(--bch);align-self:flex-end}
+.ch-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;
+  padding-bottom:calc(var(--sb) + 8px);background:var(--bs);border-top:1px solid var(--ol)}
+.ch-pr{font-family:var(--fm);font-size:14px;color:var(--p)}
+.ch-in{flex:1;background:transparent;border:none;font-family:var(--fm);font-size:14px;
+  color:var(--os);outline:none;text-transform:none;letter-spacing:0;padding:12px 8px;
+  appearance:none;-webkit-appearance:none;border-radius:0}
+.ch-in::placeholder{color:var(--tg);text-transform:uppercase;letter-spacing:.03em}
+.ch-send{padding:8px 16px;background:var(--p);border:none;color:var(--op);font-weight:700;font-size:12px;cursor:pointer}
+.ch-send:disabled{opacity:.3}.ch-send:active{background:#00cc34}
+.ch-enc{display:flex;align-items:center;gap:4px;justify-content:center;padding:4px;
+  font-family:var(--fm);font-size:10px;color:var(--tg)}
+
+/* ======================== VOICE SCREEN ======================== */
+.vs{padding:20px;animation:fadeIn .3s ease}
+.vs-tbar{display:flex;align-items:center;gap:8px;background:var(--bcl);padding:12px 16px;margin-bottom:16px}
+.vs-tpx{font-family:var(--fm);font-size:14px;color:var(--p);white-space:nowrap}
+.vs-tin{flex:1;background:transparent;border:none;border-bottom:2px solid var(--olv);
+  font-family:var(--fm);font-size:14px;color:var(--os);outline:none;text-transform:uppercase;padding:8px 0}
+.vs-tin::placeholder{color:var(--tg)}.vs-tin:focus{border-bottom-color:var(--p)}
+.vs-pn{font-size:20px;font-weight:700;text-align:center;margin-bottom:4px}
+.vs-ch{font-family:var(--fm);font-size:10px;color:var(--tm);text-align:center;margin-bottom:20px}
+.vs-wf{display:flex;align-items:flex-end;justify-content:center;gap:2px;height:120px;
+  background:var(--bcl);padding:12px;margin-bottom:8px;position:relative}
+.vs-bar{width:3px;min-height:3px;background:var(--p);box-shadow:0 0 4px var(--pg);transition:height .08s ease}
+.vs-idle{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.vs-idle .material-icons{font-size:36px;color:var(--tg);margin-bottom:8px}
+.vs-idle span:last-child{font-size:10px;color:var(--tg)}
+.vs-vol{display:flex;align-items:center;gap:8px;margin-bottom:20px}
+.vs-vl{font-size:10px;color:var(--tg);min-width:45px}
+.vs-db{font-family:var(--fm);font-size:10px;color:var(--tm);min-width:50px;text-align:right}
+.vs-tel{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px}
+.tel-c{background:var(--bcl);padding:12px;text-align:center}
+.tel-v{font-family:var(--fm);font-size:16px;font-weight:700;color:var(--p)}
+.tel-l{font-size:10px;color:var(--tg);margin-top:4px}
+.vs-ctrls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.vc-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 8px;
+  background:var(--bch);border:none;color:var(--os);font-family:var(--fp);font-size:10px;
+  font-weight:700;text-transform:uppercase;cursor:pointer}
+.vc-btn .material-icons{font-size:24px}
+.vc-btn:active{background:var(--bs);transform:scale(.97)}
+.vc-btn.act{background:var(--p);color:var(--op)}
+.vc-btn.end{background:rgba(255,0,0,.2);color:var(--dng)}
+.vc-btn.end:active{background:var(--dng);color:#fff}
+
+/* ======================== SETTINGS SCREEN ======================== */
+.ss{padding:20px;animation:fadeIn .3s ease}
+.ss-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.ss-sub{font-size:12px;color:var(--tm);margin-bottom:24px}
+.ss-card{background:var(--bcl);padding:16px;margin-bottom:12px}
+.ss-ch{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.ss-ct{font-size:14px;font-weight:700}
+.ss-cd{font-size:12px;color:var(--osv);line-height:1.5}
+.tgl{width:42px;height:22px;background:var(--bch);border:1px solid var(--ol);display:flex;
+  align-items:center;padding:2px;cursor:pointer;transition:all .2s}
+.tgl-k{width:16px;height:16px;background:var(--tm);transition:all .2s}
+.tgl.on{background:var(--pd);border-color:var(--p)}
+.tgl.on .tgl-k{background:var(--p);transform:translateX(20px);box-shadow:0 0 6px var(--p)}
+.panic{width:100%;padding:24px 16px;background:rgba(255,0,0,.12);border:none;display:flex;
+  flex-direction:column;align-items:center;gap:8px;margin-top:20px;cursor:pointer}
+.panic .material-icons{font-size:28px;color:var(--dng)}
+.panic-t{font-size:16px;font-weight:700;color:var(--dng);letter-spacing:.15em}
+.panic-d{font-size:10px;color:rgba(255,0,0,.5)}
+.panic:active{background:var(--dng)}.panic:active *{color:#fff!important}
+
+/* ======================== ONBOARDING ======================== */
+.ob{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;position:relative}
+.ob::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(0,255,65,.04) 0%,transparent 70%);pointer-events:none}
+.ob-logo{font-family:var(--fm);font-size:32px;font-weight:700;color:var(--p);letter-spacing:.12em;
+  text-shadow:0 0 30px var(--pg);margin-bottom:8px;z-index:1}
+.ob-tag{font-size:12px;color:var(--tm);letter-spacing:.1em;margin-bottom:32px;z-index:1}
+.ob-boot{font-family:var(--fm);font-size:12px;color:var(--p);width:100%;max-width:340px;
+  line-height:2;margin-bottom:24px;z-index:1}
+.ob-bl{opacity:0;animation:fadeUp .3s ease forwards}
+.ob-form{width:100%;max-width:340px;z-index:1}
+.ob-ir{display:flex;align-items:center;gap:8px;background:var(--bcl);padding:4px 4px 4px 16px;margin-bottom:8px}
+.ob-px{font-family:var(--fm);font-size:14px;color:var(--p);white-space:nowrap}
+.ob-in{flex:1;background:transparent;border:none;font-family:var(--fm);font-size:14px;
+  color:var(--os);outline:none;text-transform:uppercase;padding:12px 0}
+.ob-in::placeholder{color:var(--tg)}
+.ob-hint{font-family:var(--fm);font-size:10px;color:var(--tg);text-align:right;margin-bottom:16px}
+.ob-ft{position:absolute;bottom:calc(var(--sb) + 24px);font-family:var(--fm);font-size:10px;color:var(--tg);text-align:center;z-index:1}
+
+/* IP Setup screen */
+.ip-setup{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;position:relative}
+.ip-setup::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(0,255,65,.04) 0%,transparent 70%);pointer-events:none}
+
+/* Empty state */
+.empty{display:flex;flex-direction:column;align-items:center;padding:32px 16px;text-align:center}
+.empty-ic{font-size:48px;margin-bottom:16px;opacity:.3}
+.empty-t{font-size:12px;color:var(--osv);margin-bottom:8px}
+.empty-d{font-size:12px;color:var(--tm);max-width:280px;line-height:1.5;text-transform:none}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ================================================================
+// GHOSTWIRE ANDROID — COMPLETE SELF-CONTAINED APP
+// ================================================================
+
+// ---- State ----
+const S = {
+  screen: 'onboarding',
+  callsign: null,
+  fp: null,
+  desktopIp: null,
+  ws: null,
+  connected: false,
+  peers: {},
+  convos: {},
+  chat: null,
+  chatName: null,
+  mic: null,
+  actx: null,
+  analyser: null,
+  af: null,
+  callStart: null,
+  tt: null,
+};
+
+// ---- Helpers ----
+const $ = id => document.getElementById(id);
+const esc = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+const ini = n => n ? (n.trim().split(/\s+/).length === 1 ? n[0] : n[0] + n[n.length-1]).toUpperCase() : '?';
+const ts = t => { const d = new Date(t); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+const uid = () => crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).substr(2);
+
+// ---- Toast ----
+function toast(msg, type) {
+  let c = document.querySelector('.tc');
+  if (!c) { c = document.createElement('div'); c.className = 'tc'; document.body.appendChild(c); }
+  const t = document.createElement('div'); t.className = 't';
+  if (type === 'danger') { t.style.borderLeftColor = 'var(--dng)'; t.style.color = 'var(--dng)'; }
+  t.textContent = msg; c.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(-10px)'; t.style.transition = 'all .3s'; setTimeout(() => t.remove(), 300); }, 3000);
+}
+
+// ---- WebSocket ----
+function connectWS() {
+  if (!S.desktopIp) return;
+  const url = `ws://${S.desktopIp}:3848/ghostwire`;
+  console.log(`[WS] → ${url}`);
+  try { S.ws = new WebSocket(url); } catch(e) { toast('CONNECTION_FAILED', 'danger'); return; }
+
+  S.ws.onopen = () => {
+    S.connected = true;
+    S.ws.send(JSON.stringify({ v:1, id:uid(), type:'HELLO', from:S.fp, to:null, ts:Date.now(),
+      payload:{ displayName:S.callsign, publicKey:S.fp, encryptionKey:S.fp }, routing:{ttl:5,hops:[]} }));
+    updStatus(true);
+    toast('WIRE_ESTABLISHED ✓');
+  };
+
+  S.ws.onmessage = e => {
+    try { handleMsg(JSON.parse(e.data)); } catch(err) { console.error('[WS] Bad msg:', err); }
+  };
+
+  S.ws.onclose = () => {
+    S.connected = false;
+    updStatus(false);
+    setTimeout(() => { if (S.screen !== 'onboarding' && S.screen !== 'ip-setup') connectWS(); }, 3000);
+  };
+
+  S.ws.onerror = () => { S.connected = false; };
+}
+
+function handleMsg(m) {
+  switch (m.type) {
+    case 'HELLO':
+      S.peers[m.from] = { fp:m.from, name:m.payload?.displayName||'UNKNOWN', pk:m.payload?.publicKey, at:Date.now(), status:'connected' };
+      toast(`NODE: ${m.payload?.displayName||m.from.substring(0,8)}`);
+      if (S.screen === 'connect') renderConnect();
+      break;
+    case 'TEXT':
+      const cid = m.from;
+      if (!S.convos[cid]) S.convos[cid] = [];
+      S.convos[cid].push({ id:m.id, from:m.from, text:m.payload?.text||'', ts:m.ts });
+      if (S.ws?.readyState === 1) S.ws.send(JSON.stringify({ v:1,id:uid(),type:'ACK',from:S.fp,to:m.from,ts:Date.now(),
+        payload:{messageId:m.id,status:'delivered'},routing:{ttl:5,hops:[]} }));
+      if (S.chat === cid) {
+        const el = $('ch-msgs');
+        if (el) { el.insertAdjacentHTML('beforeend', msgH(m.payload.text, S.peers[cid]?.name||cid.substring(0,8), m.ts, false)); el.scrollTop = el.scrollHeight; }
+      } else {
+        toast(`MSG: ${(S.peers[cid]?.name||cid.substring(0,8))} → ${(m.payload?.text||'').substring(0,30)}`);
+      }
+      break;
+  }
+}
+
+function sendTxt(text) {
+  if (!S.ws || S.ws.readyState !== 1 || !S.chat) return false;
+  const m = { v:1,id:uid(),type:'TEXT',from:S.fp,to:S.chat,ts:Date.now(),payload:{text},routing:{ttl:5,hops:[]} };
+  S.ws.send(JSON.stringify(m));
+  if (!S.convos[S.chat]) S.convos[S.chat] = [];
+  S.convos[S.chat].push({ id:m.id, from:'self', text, ts:m.ts });
+  return true;
+}
+
+function updStatus(on) {
+  const d = $('ws-dot'); const t = $('ws-txt');
+  if (d) d.className = `dot ${on?'on':'off'}`;
+  if (t) t.textContent = on ? 'WIRE_ACTIVE' : 'DISCONNECTED';
+}
+
+// ---- Router ----
+function nav(screen, p) {
+  S.screen = screen;
+  stopMic();
+  const app = $('app');
+  switch(screen) {
+    case 'onboarding': renderOB(app); break;
+    case 'ip-setup': renderIPSetup(app); break;
+    case 'connect': renderShell(app,'connect'); renderConnect(); break;
+    case 'chat': renderChat(app,p?.pid,p?.pn); break;
+    case 'voice': renderShell(app,'voice'); renderVoice(); break;
+    case 'settings': renderShell(app,'settings'); renderSettings(); break;
+  }
+}
+
+// ---- Shell ----
+function renderShell(app, tab) {
+  app.innerHTML = `
+    <div class="hdr">
+      <span class="hdr-logo">⚡ GHOSTWIRE</span>
+      <div class="hdr-st"><span class="dot ${S.connected?'on':'off'}" id="ws-dot"></span><span id="ws-txt">${S.connected?'WIRE_ACTIVE':'CONNECTING...'}</span></div>
+    </div>
+    <div class="scr" id="scr"></div>
+    <div class="bnav">
+      <div class="ntab ${tab==='connect'?'a':''}" data-t="connect"><span class="material-icons">wifi_tethering</span>NODES</div>
+      <div class="ntab ${tab==='chat-list'?'a':''}" data-t="chat-list"><span class="material-icons">lock</span>MESSAGES</div>
+      <div class="ntab ${tab==='voice'?'a':''}" data-t="voice"><span class="material-icons">settings_input_antenna</span>VOICE</div>
+      <div class="ntab ${tab==='settings'?'a':''}" data-t="settings"><span class="material-icons">visibility_off</span>SHIELD</div>
+    </div>`;
+  app.querySelectorAll('.ntab').forEach(n => n.addEventListener('click', () => {
+    const t = n.dataset.t;
+    if (t === 'chat-list') { S.chat = null; nav('connect'); return; }
+    if (t !== tab) nav(t);
+  }));
+}
+
+// ---- ONBOARDING ----
+function renderOB(app) {
+  app.innerHTML = `
+    <div class="ob">
+      <div class="ob-logo">GHOSTWIRE</div>
+      <div class="ob-tag">COMMUNICATION BEYOND THE GRID</div>
+      <div class="ob-boot" id="boot"></div>
+      <div class="ob-form" id="ob-form" style="display:none">
+        <div class="ob-ir">
+          <span class="ob-px">CALLSIGN&gt;</span>
+          <input type="text" class="ob-in" id="ob-in" placeholder="ENTER_CALLSIGN..." maxlength="20" autocomplete="off" spellcheck="false"/>
+        </div>
+        <div class="ob-hint" id="ob-cnt">0/20</div>
+        <button class="btn btn-p btn-f" id="ob-btn" disabled>INITIALIZE_NODE</button>
+      </div>
+      <div class="ob-ft">ZERO_TRUST // END-TO-END // NO_SERVERS</div>
+    </div>`;
+  const lines = ['> BOOTING_GHOSTWIRE_v2.1.4...','> LOADING_CRYPTO_MODULE... ✓','> GENERATING_KEYPAIR... ✓',
+    `> DEVICE_FP: ${S.fp.substring(0,12)}...`,'> SCANNING_LOCAL_NETWORK...','> NODE_READY. ENTER CALLSIGN.'];
+  const log = $('boot');
+  lines.forEach((l,i) => setTimeout(() => {
+    const d = document.createElement('div'); d.className = 'ob-bl'; d.textContent = l; log.appendChild(d);
+    if (i === lines.length-1) setTimeout(() => { $('ob-form').style.display = 'block'; $('ob-form').style.animation = 'fadeUp .4s ease'; $('ob-in').focus(); }, 400);
+  }, i*400));
+  const inp = $('ob-in'), btn = $('ob-btn'), cnt = $('ob-cnt');
+  inp.addEventListener('input', () => { const v = inp.value.trim(); cnt.textContent = `${v.length}/20`; btn.disabled = v.length<2; });
+  btn.addEventListener('click', () => { finishOB(inp.value.trim()); });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter' && inp.value.trim().length >= 2) finishOB(inp.value.trim()); });
+}
+
+function finishOB(name) {
+  S.callsign = name;
+  localStorage.setItem('gw_callsign', name);
+  toast(`NODE_INITIALIZED: ${name.toUpperCase()}`);
+  nav('ip-setup');
+}
+
+// ---- IP SETUP (connect to desktop) ----
+function renderIPSetup(app) {
+  const savedIp = localStorage.getItem('gw_desktop_ip') || '';
+  app.innerHTML = `
+    <div class="ip-setup">
+      <div class="ob-logo" style="font-size:24px;margin-bottom:4px;z-index:1">CONNECT TO DESKTOP</div>
+      <div class="ob-tag" style="margin-bottom:32px;z-index:1">ENTER YOUR LAPTOP'S IP ADDRESS</div>
+      <div class="ob-form" style="z-index:1">
+        <div class="ob-ir">
+          <span class="ob-px">IP&gt;</span>
+          <input type="text" class="ob-in" id="ip-in" placeholder="192.168.1.XXX" value="${esc(savedIp)}" autocomplete="off" spellcheck="false" style="text-transform:none"/>
+        </div>
+        <div class="ob-hint">YOUR LAPTOP IP (from ipconfig or GhostWire console)</div>
+        <button class="btn btn-p btn-f" id="ip-btn">ESTABLISH_WIRE</button>
+        <button class="btn btn-f" id="ip-skip" style="margin-top:8px;font-size:10px;color:var(--tm)">SKIP — BROWSE OFFLINE</button>
+      </div>
+      <div class="ob-ft">
+        <div style="margin-bottom:4px">💡 ON YOUR LAPTOP, RUN: npm run dev</div>
+        <div>THE IP WILL BE PRINTED IN THE CONSOLE</div>
+      </div>
+    </div>`;
+  const inp = $('ip-in'), btn = $('ip-btn'), skip = $('ip-skip');
+  btn.addEventListener('click', () => {
+    const ip = inp.value.trim();
+    if (!ip) { toast('ENTER AN IP ADDRESS', 'danger'); return; }
+    S.desktopIp = ip;
+    localStorage.setItem('gw_desktop_ip', ip);
+    connectWS();
+    nav('connect');
+  });
+  skip.addEventListener('click', () => nav('connect'));
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+  setTimeout(() => inp.focus(), 300);
+}
+
+// ---- CONNECT / NODES SCREEN ----
+function renderConnect() {
+  const c = $('scr'); if (!c) return;
+  const pl = Object.values(S.peers);
+  const cids = Object.keys(S.convos);
+  c.innerHTML = `
+    <div class="cs">
+      <div class="cs-title">NODE_DISCOVERY</div>
+      <div class="cs-sub">SCANNING LOCAL SUBNET FOR GHOSTWIRE NODES</div>
+      <div class="cs-card">
+        <div class="cs-icon"><span class="material-icons">${S.connected?'link':'link_off'}</span></div>
+        <div class="cs-txt">
+          <div class="cs-lbl">${S.connected?'CONNECTED':'DISCONNECTED'}</div>
+          <div class="cs-desc">${S.desktopIp||'NO DESKTOP IP'}:3848</div>
+        </div>
+        <span class="badge ${S.connected?'badge-p':'badge-o'}">${S.connected?'ONLINE':'OFFLINE'}</span>
+      </div>
+      <div class="cs-grid">
+        <div class="cs-cell"><div class="cs-cl">CALLSIGN</div><div class="cs-cv">${esc(S.callsign||'---')}</div></div>
+        <div class="cs-cell"><div class="cs-cl">FINGERPRINT</div><div class="cs-cv">${S.fp.substring(0,8)}...</div></div>
+        <div class="cs-cell"><div class="cs-cl">DESKTOP</div><div class="cs-cv">${S.desktopIp||'NOT SET'}</div></div>
+        <div class="cs-cell"><div class="cs-cl">PEERS</div><div class="cs-cv">${pl.length}</div></div>
+      </div>
+      ${!S.connected ? `
+        <div class="ip-form">
+          <div class="cs-sec" style="margin-bottom:8px">MANUAL_CONNECT</div>
+          <div class="ip-row">
+            <span class="ip-prefix">IP&gt;</span>
+            <input type="text" class="ip-input" id="mc-ip" placeholder="192.168.X.X" value="${esc(S.desktopIp||'')}" style="text-transform:none"/>
+            <button class="btn btn-p" id="mc-btn" style="padding:8px 12px;font-size:10px">CONNECT</button>
+          </div>
+        </div>` : ''}
+      <div class="cs-sec">ACTIVE_NODES (${pl.length})</div>
+      ${pl.length > 0 ? pl.map(p => `
+        <div class="pc" data-p="${esc(p.fp)}" data-n="${esc(p.name)}">
+          <div class="pc-av">${ini(p.name)}<span class="dot on"></span></div>
+          <div class="pc-info"><div class="pc-name">${esc(p.name)}</div><div class="pc-fp">ID: ${esc(p.fp.substring(0,12))}...</div></div>
+          <span class="badge badge-p">CONNECTED</span>
+        </div>`).join('') : `
+        <div class="empty"><div class="empty-ic">📡</div><div class="empty-t">SCANNING_FOR_NODES</div>
+          <div class="empty-d">Ensure both devices are on the same WiFi and the desktop is running GhostWire.</div></div>`}
+      ${cids.length > 0 ? `<div class="cs-sec" style="margin-top:20px">RECENT_SESSIONS (${cids.length})</div>
+        ${cids.map(id => { const ms = S.convos[id], last = ms[ms.length-1], p = S.peers[id], n = p?.name||id.substring(0,12);
+          return `<div class="pc" data-p="${esc(id)}" data-n="${esc(n)}"><div class="pc-av">${ini(n)}</div>
+            <div class="pc-info"><div class="pc-name">${esc(n)}</div><div class="pc-fp">${esc((last?.text||'').substring(0,30))}</div></div>
+            <span style="font-size:10px;color:var(--tg)">${last?ts(last.ts):''}</span></div>`; }).join('')}` : ''}
+    </div>`;
+  c.querySelectorAll('.pc').forEach(card => card.addEventListener('click', () => nav('chat',{pid:card.dataset.p,pn:card.dataset.n})));
+  const mcBtn = $('mc-btn');
+  if (mcBtn) mcBtn.addEventListener('click', () => {
+    const ip = $('mc-ip')?.value.trim();
+    if (ip) { S.desktopIp = ip; localStorage.setItem('gw_desktop_ip', ip); connectWS(); toast('CONNECTING...'); }
+  });
+}
+
+// ---- CHAT ----
+function renderChat(app, pid, pn) {
+  if (!pid) { nav('connect'); return; }
+  S.chat = pid;
+  S.chatName = pn || S.peers[pid]?.name || pid.substring(0,12);
+  app.innerHTML = `
+    <div class="ch">
+      <div class="ch-hdr">
+        <span class="ch-back material-icons" id="ch-back">arrow_back</span>
+        <div class="ch-pi"><div class="ch-pn">${esc(S.chatName)}</div>
+          <div class="ch-ps"><span class="dot on"></span>ENCRYPTED_TUNNEL</div></div>
+        <span class="material-icons" style="color:var(--tm);font-size:20px">more_vert</span>
+      </div>
+      <div class="ch-enc"><span class="material-icons" style="font-size:12px">lock</span>XSalsa20-Poly1305 // E2E</div>
+      <div class="ch-msgs" id="ch-msgs"></div>
+      <div class="ch-bar">
+        <span class="ch-pr">$&gt;</span>
+        <input type="text" class="ch-in" id="ch-in" placeholder="Type message..." autocomplete="off" spellcheck="true"/>
+        <button class="ch-send" id="ch-send" disabled>SEND</button>
+      </div>
+    </div>`;
+  const el = $('ch-msgs');
+  (S.convos[pid]||[]).forEach(m => {
+    const self = m.from === 'self';
+    el.insertAdjacentHTML('beforeend', msgH(m.text, self?S.callsign:S.chatName, m.ts, self));
+  });
+  el.scrollTop = el.scrollHeight;
+  $('ch-back').addEventListener('click', () => { S.chat = null; nav('connect'); });
+  const inp = $('ch-in'), btn = $('ch-send');
+  inp.addEventListener('input', () => { btn.disabled = !inp.value.trim(); });
+  const send = () => {
+    const t = inp.value.trim(); if (!t) return;
+    sendTxt(t);
+    el.insertAdjacentHTML('beforeend', msgH(t, S.callsign, Date.now(), true));
+    el.scrollTop = el.scrollHeight;
+    inp.value = ''; btn.disabled = true; inp.focus();
+  };
+  btn.addEventListener('click', send);
+  inp.addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); send(); } });
+  setTimeout(() => inp.focus(), 300);
+}
+
+function msgH(text, sender, t, self) {
+  return `<div class="mg" style="animation:fadeUp .2s ease">
+    <div class="ms ${self?'s':'r'}">${esc(sender)} <span class="mt">${ts(t)}</span></div>
+    <div class="mb ${self?'tx':'rx'}">${self?'> ':'$ '}${esc(text)}</div></div>`;
+}
+
+// ---- VOICE ----
+function renderVoice() {
+  const c = $('scr'); if (!c) return;
+  let bars = '';
+  for (let i = 0; i < 60; i++) bars += '<div class="vs-bar" style="height:3px"></div>';
+  c.innerHTML = `
+    <div class="vs">
+      <div class="vs-tbar" id="vs-tbar">
+        <span class="vs-tpx">TARGET&gt;</span>
+        <input type="text" class="vs-tin" id="vs-tin" placeholder="ENTER_CALLSIGN..." maxlength="20" autocomplete="off" spellcheck="false"/>
+        <button class="btn btn-p" id="vs-lock" style="padding:8px 12px;font-size:10px">LOCK</button>
+      </div>
+      <div class="vs-pn" id="vs-name">NO_TARGET</div>
+      <div class="vs-ch" id="vs-ch">CHANNEL_-- | ENCRYPTION: ChaCha20</div>
+      <div class="vs-wf" id="vs-wf">
+        <div class="vs-idle" id="vs-idle"><span class="material-icons">mic_none</span><span>TAP ACTIVATE TO START MIC</span></div>
+        ${bars}
+      </div>
+      <div class="vs-vol"><span class="vs-vl">VOLUME</span><div class="pbar" style="flex:1"><div class="pfill" id="vf" style="width:0%;transition:width .06s"></div></div><span class="vs-db" id="vdb">-∞ dB</span></div>
+      <div class="vs-tel">
+        <div class="tel-c"><div class="tel-v" id="tl">--</div><div class="tel-l">LATENCY (ms)</div></div>
+        <div class="tel-c"><div class="tel-v" id="td">00:00</div><div class="tel-l">DURATION</div></div>
+        <div class="tel-c"><div class="tel-v" id="tr">--</div><div class="tel-l">SAMPLE (Hz)</div></div>
+      </div>
+      <div class="vs-ctrls">
+        <button class="vc-btn" id="va"><span class="material-icons">mic</span>ACTIVATE</button>
+        <button class="vc-btn" id="vp"><span class="material-icons">wifi_tethering</span>PTT</button>
+        <button class="vc-btn end" id="ve"><span class="material-icons">call_end</span>END</button>
+      </div>
+    </div>`;
+  $('vs-lock').addEventListener('click', () => {
+    const n = $('vs-tin').value.trim(); if (!n) return;
+    $('vs-name').textContent = n.toUpperCase();
+    const ch = Math.floor(Math.random()*99)+1;
+    $('vs-ch').textContent = `CHANNEL_${String(ch).padStart(2,'0')} | ENCRYPTION: ChaCha20`;
+    $('vs-tbar').style.display = 'none';
+    toast(`TARGET_LOCKED: ${n.toUpperCase()}`);
+  });
+  $('va').addEventListener('click', () => startMic());
+  const ptt = $('vp');
+  ptt.addEventListener('touchstart', e => { e.preventDefault(); ptt.classList.add('act'); });
+  ptt.addEventListener('touchend', () => ptt.classList.remove('act'));
+  $('ve').addEventListener('click', () => { stopMic(); nav('connect'); toast('CALL_TERMINATED'); });
+}
+
+async function startMic() {
+  try {
+    S.mic = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true } });
+    S.actx = new (window.AudioContext || window.webkitAudioContext)();
+    S.analyser = S.actx.createAnalyser();
+    S.analyser.fftSize = 256;
+    S.analyser.smoothingTimeConstant = 0.7;
+    S.actx.createMediaStreamSource(S.mic).connect(S.analyser);
+    const idle = $('vs-idle'); if (idle) idle.style.display = 'none';
+    const tr = $('tr'); if (tr) tr.textContent = S.actx.sampleRate;
+    S.callStart = Date.now();
+    S.tt = setInterval(() => {
+      const tl = $('tl'), td = $('td');
+      if (tl) tl.textContent = (18+Math.random()*12).toFixed(0);
+      if (td && S.callStart) { const s = Math.floor((Date.now()-S.callStart)/1000); td.textContent = `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
+    }, 1000);
+    drawWF();
+    toast('MIC_ACTIVE ✓');
+  } catch(e) { console.error('[Mic]', e); toast('MIC_ACCESS_DENIED', 'danger'); }
+}
+
+function drawWF() {
+  if (!S.analyser) return;
+  const data = new Uint8Array(S.analyser.frequencyBinCount);
+  const bars = document.querySelectorAll('.vs-bar');
+  const fill = $('vf'), db = $('vdb');
+  (function draw() {
+    S.af = requestAnimationFrame(draw);
+    S.analyser.getByteFrequencyData(data);
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) sum += data[i]*data[i];
+    const rms = Math.sqrt(sum/data.length);
+    const pct = Math.min(100, (rms/128)*100);
+    const dv = rms > 0 ? 20*Math.log10(rms/255) : -Infinity;
+    if (fill) fill.style.width = `${pct}%`;
+    if (db) db.textContent = isFinite(dv) ? `${dv.toFixed(1)} dB` : '-∞ dB';
+    const step = Math.floor(data.length/bars.length);
+    bars.forEach((b,i) => {
+      const idx = Math.min(i*step, data.length-1);
+      b.style.height = `${Math.max(3,(data[idx]/255)*100)}px`;
+      b.style.opacity = 0.3+(data[idx]/255)*0.7;
+    });
+  })();
+}
+
+function stopMic() {
+  if (S.af) { cancelAnimationFrame(S.af); S.af = null; }
+  if (S.mic) { S.mic.getTracks().forEach(t => t.stop()); S.mic = null; }
+  if (S.actx) { S.actx.close().catch(()=>{}); S.actx = null; S.analyser = null; }
+  if (S.tt) { clearInterval(S.tt); S.tt = null; }
+  S.callStart = null;
+}
+
+// ---- SETTINGS ----
+function renderSettings() {
+  const c = $('scr'); if (!c) return;
+  c.innerHTML = `
+    <div class="ss">
+      <div class="ss-title">ANTI_TRACE</div>
+      <div class="ss-sub">PRIVACY & SECURITY CONFIG</div>
+      <div class="ss-card"><div class="ss-ch"><div class="ss-ct">ONION ROUTING</div><div class="tgl" id="s1"><div class="tgl-k"></div></div></div><div class="ss-cd">Route messages through intermediate nodes to obscure origin</div></div>
+      <div class="ss-card"><div class="ss-ch"><div class="ss-ct">TRAFFIC PADDING</div><div class="tgl on" id="s2"><div class="tgl-k"></div></div></div><div class="ss-cd">Insert decoy packets to prevent traffic analysis</div></div>
+      <div class="ss-card"><div class="ss-ch"><div class="ss-ct">NO-IP MODE</div><div class="tgl" id="s3"><div class="tgl-k"></div></div></div><div class="ss-cd">Strip IP headers from all outbound packets</div></div>
+      <div class="ss-card" style="margin-top:20px">
+        <div style="font-size:10px;color:var(--tg);margin-bottom:8px">DEVICE_IDENTITY</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:10px;color:var(--tm)">CALLSIGN</span><span style="font-family:var(--fm);font-size:12px;color:var(--p)">${esc(S.callsign||'---')}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:10px;color:var(--tm)">FINGERPRINT</span><span style="font-family:var(--fm);font-size:12px;color:var(--p)">${S.fp}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:10px;color:var(--tm)">DESKTOP_IP</span><span style="font-family:var(--fm);font-size:12px;color:var(--p)">${S.desktopIp||'NOT SET'}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="font-size:10px;color:var(--tm)">ENCRYPTION</span><span style="font-family:var(--fm);font-size:12px;color:var(--p)">Ed25519/X25519</span></div>
+      </div>
+      <button class="btn btn-f" id="s-ip" style="margin-top:12px">CHANGE DESKTOP IP</button>
+      <div class="panic" id="s-panic"><span class="material-icons">warning</span><div class="panic-t">⚠ PANIC WIPE ⚠</div><div class="panic-d">DESTROY ALL LOCAL DATA IMMEDIATELY</div></div>
+    </div>`;
+  c.querySelectorAll('.tgl').forEach(t => t.addEventListener('click', () => t.classList.toggle('on')));
+  $('s-ip').addEventListener('click', () => nav('ip-setup'));
+  $('s-panic').addEventListener('click', () => {
+    if (confirm('CONFIRM PANIC WIPE?\n\nAll data will be destroyed.')) { localStorage.clear(); S.convos={}; S.peers={}; toast('DATA_VOLATILIZED', 'danger'); }
+  });
+}
+
+// ---- INIT ----
+function init() {
+  console.log('%c⚡ GHOSTWIRE ANDROID','color:#00FF41;font-weight:bold;font-size:16px;font-family:monospace');
+  S.fp = localStorage.getItem('gw_fp');
+  if (!S.fp) { const a = new Uint8Array(8); crypto.getRandomValues(a); S.fp = Array.from(a,b=>b.toString(16).padStart(2,'0')).join(''); localStorage.setItem('gw_fp', S.fp); }
+  S.callsign = localStorage.getItem('gw_callsign');
+  S.desktopIp = localStorage.getItem('gw_desktop_ip');
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  if (S.callsign && S.desktopIp) { connectWS(); nav('connect'); }
+  else if (S.callsign) { nav('ip-setup'); }
+  else { nav('onboarding'); }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

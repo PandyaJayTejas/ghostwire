@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Electron
+out/
+
+# Environment
+.env
+.env.local
+
+# Identity (sensitive)
+identity.json
+
+# Gemini/AI
+.gemini/

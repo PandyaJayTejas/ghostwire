@@ -1,0 +1,18 @@
+{
+  "name": "GhostWire",
+  "short_name": "GhostWire",
+  "description": "Encrypted P2P Communication — Beyond the Grid",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
